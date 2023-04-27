@@ -18,6 +18,8 @@ import torch
 from PIL import Image, ImageFilter, ImageEnhance, ImageOps, ImageDraw, ImageChops, ImageFont
 from rembg import remove
 import numpy as np
+import math
+
 
 # Tensor to PIL
 def tensor2pil(image):
@@ -49,37 +51,6 @@ class RemoveBackground:
         output_image = remove(pil_image)
         return (pil2tensor(output_image), )
     
-# class CropTransparent:
-#     def __init__(self):
-#         pass
-
-#     @classmethod
-#     def INPUT_TYPES(cls):
-#         return {
-#             "required": {
-#                 "image": ("IMAGE",)
-#             },
-#         }
-
-#     RETURN_TYPES = ("IMAGE", "IMAGE_BOUNDS",)
-#     FUNCTION = "image_crop_transparent"
-
-#     CATEGORY = "image/postprocessing"
-
-#     def image_crop_transparent(self, image):
-#         pil_image = tensor2pil(image)
-#         bbox = pil_image.getbbox()
-#         output_image = pil_image.crop(bbox)
-
-#         left, upper, right, lower = bbox
-#         image_bounds = [upper, lower, left, right]
-#         print(image_bounds)
-#         print(output_image.size)
-
-#         return (pil2tensor(output_image), image_bounds,)
-
-import math
-
 class CropTransparent:
     def __init__(self):
         pass
@@ -88,7 +59,8 @@ class CropTransparent:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "image": ("IMAGE",)
+                "image": ("IMAGE",),
+                "image_resolution_multi": ("INT", {"default": 8, "min": 0, "max": 0xffffffffffffffff}),
             },
         }
 
@@ -97,7 +69,7 @@ class CropTransparent:
 
     CATEGORY = "image/postprocessing"
 
-    def image_crop_transparent(self, image):
+    def image_crop_transparent(self, image, image_resolution_multi):
         pil_image = tensor2pil(image)
         bbox = pil_image.getbbox()
 
@@ -105,9 +77,11 @@ class CropTransparent:
         width = right - left
         height = lower - upper
 
-        # Round up dimensions to the nearest multiple of 32
-        new_width = math.ceil(width / 32) * 32
-        new_height = math.ceil(height / 32) * 32
+        # Round up dimensions to the nearest multiple of 64
+        new_width = math.ceil(width / image_resolution_multi) * image_resolution_multi
+        new_height = math.ceil(height / image_resolution_multi) * image_resolution_multi
+
+        print(f"new_width: {new_width}, new_height: {new_height}")
 
         # Calculate the necessary padding
         pad_left = (new_width - width) // 2
@@ -117,15 +91,18 @@ class CropTransparent:
         new_left = max(left - pad_left, 0)
         new_upper = max(upper - pad_upper, 0)
 
+        #if the boundaries of cropped area exceed the original image we reduce the selection to the next 64 multiple
         if new_left + new_width > pil_image.width:
-            new_left = pil_image.width - new_width
+            new_width = new_width - image_resolution_multi
 
         if new_upper + new_height > pil_image.height:
-            new_upper = pil_image.height - new_height
+            new_height = new_height - image_resolution_multi
+
+        print(f"reduced new_width: {new_width}, new_height: {new_height}")
 
         # Ensure dimensions are multiples of 32
-        new_width = min(new_width, pil_image.width - new_left)
-        new_height = min(new_height, pil_image.height - new_upper)
+        # new_width = min(new_width, pil_image.width - new_left)
+        # new_height = min(new_height, pil_image.height - new_upper)
 
         new_right = new_left + new_width
         new_lower = new_upper + new_height
@@ -133,6 +110,7 @@ class CropTransparent:
         # Crop the image using the adjusted bounding box
         output_image = pil_image.crop((new_left, new_upper, new_right, new_lower))
         image_bounds = [new_upper, new_lower, new_left, new_right]
+        print(f"image_bounds: {image_bounds}")
 
         return (pil2tensor(output_image), image_bounds,)
 
