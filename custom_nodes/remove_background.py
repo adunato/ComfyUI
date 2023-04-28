@@ -114,9 +114,34 @@ class CropTransparent:
 
         return (pil2tensor(output_image), image_bounds,)
 
+class CalculateImageBounds:
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(self):
+        return {
+            "required": {
+                "image_bounds": ("IMAGE_BOUNDS",),
+                "image": ("IMAGE",),
+            }
+        }
+
+    RETURN_TYPES = ("IMAGE_BOUNDS",)
+    FUNCTION = "calculate_image_bounds"
+
+    CATEGORY = "image/postprocessing"
+
+    def calculate_image_bounds(self, image, image_bounds):
+        pil_image = tensor2pil(image)
+        rmin, rmax, cmin, cmax = image_bounds
+        output_image_bounds = [rmin, rmin+pil_image.height, cmin, cmin+pil_image.width]
+        print(f"calculate_image_bounds: {output_image_bounds}")
+        return (output_image_bounds,)
 
 
 NODE_CLASS_MAPPINGS = {
     "RemoveBackground": RemoveBackground,
     "CropTransparent": CropTransparent,
+    "CalculateImageBounds": CalculateImageBounds,
 }
