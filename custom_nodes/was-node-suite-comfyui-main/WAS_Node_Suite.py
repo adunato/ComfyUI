@@ -5137,6 +5137,86 @@ class WAS_Load_Text_File_Batch:
     def IS_CHANGED(cls, **kwargs):
         return float("NaN")        
 
+# LOAD TEXT FILE LINES
+
+class WAS_Load_Text_File_Lines:
+    def __init__(self):
+        self.HDB = WASDatabase(WAS_HISTORY_DATABASE)
+            
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "mode": (["single_line", "incremental_line"],),
+                "index": ("INT", {"default": 0, "min": 0, "max": 150000, "step": 1}),
+                "label": ("STRING", {"default": 'Batch 001', "multiline": False}),
+                "file_path": ("STRING", {"default": './ComfyUI/input/prompt.txt', "multiline": False})
+            },
+        }
+
+    RETURN_TYPES = (TEXT_TYPE,TEXT_TYPE)
+    RETURN_NAMES = ("text","filename_text")
+    FUNCTION = "load_batch_files"
+
+    CATEGORY = "WAS Suite/IO"
+
+    def load_batch_files(self, file_path, index=0, mode="single_line", label='Batch 001'):
+        
+        if not os.path.exists(file_path):
+            return (None, )
+        fl = self.BatchFileLinesLoader(file_path, label)
+        if mode == 'single_line':
+            line, filename = fl.get_line_by_id(index)
+        else:
+            line, filename = fl.get_next_line()
+
+        # Update history
+        update_history_text_files(file_path)
+
+        return (line, filename)
+
+    class BatchFileLinesLoader:
+        def __init__(self, file_path, label):
+            self.WDB = WDB
+            self.file_path = file_path
+            self.load_lines_from_file(file_path)
+            stored_file_path = self.WDB.get('Text File Path', label)
+            if stored_file_path != file_path:
+                self.index = 0
+                self.WDB.insert('Text File Counters', label, 0)
+                self.WDB.insert('Text File Path', label, file_path)
+            else:
+                self.index = self.WDB.get('Text File Counters', label)
+            self.label = label
+
+        def load_lines_from_file(self, file_path):
+            if not os.path.exists(file_path):
+                return (None, )
+            self.file_lines = self.read_file_lines(file_path)
+            # Update history
+            update_history_text_files(file_path)
+
+        def read_file_lines(self, file_path):
+            with open(file_path, 'r', encoding='utf-8') as file:
+                lines = file.readlines()
+            return lines
+
+        def get_next_line(self):
+            if self.index >= len(self.file_lines):
+                self.index = 0
+            print(f'\033[34mWAS NS \033[33m{self.label}\033[0m Index:', self.index)
+            self.WDB.insert('Text File Counters', self.label, self.index)
+            file_line = self.file_lines[self.index]
+            self.index += 1
+            return (file_line, os.path.basename(self.file_path))
+
+        def get_line_by_id(self, line_id):
+            return (self.file_lines[line_id], os.path.basename(self.file_path))
+        
+    @classmethod
+    def IS_CHANGED(cls, **kwargs):
+        return float("NaN")
+    
 class WAS_Text_To_String:
     def __init__(self):
         pass
@@ -6537,6 +6617,7 @@ NODE_CLASS_MAPPINGS = {
     "Load Image Batch": WAS_Load_Image_Batch,
     "Load Text File": WAS_Text_Load_From_File,
     "Load Text File Batch" : WAS_Load_Text_File_Batch,
+    "Load Text File Lines" : WAS_Load_Text_File_Lines,
     "MiDaS Depth Approximation": MiDaS_Depth_Approx,
     "MiDaS Mask Image": MiDaS_Background_Foreground_Removal,
     "Number Operation": WAS_Number_Operation,
