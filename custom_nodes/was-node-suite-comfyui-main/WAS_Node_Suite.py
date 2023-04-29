@@ -5043,10 +5043,99 @@ class WAS_Text_Load_From_File:
                     line = line.replace("\n", '').replace("\r",'').replace("\r\n",'')
                 lines.append(line.replace("\n",'').replace("\r",'').replace("\r\n",''))
         dictionary = {filename: lines}
+
+        print(f"dictionary: {dictionary}")
             
         return ("\n".join(lines), dictionary)
 
-# LOAD TEXT TO STRING
+# LOAD TEXT FILE BATCH
+
+class WAS_Load_Text_File_Batch:
+    def __init__(self):
+        self.HDB = WASDatabase(WAS_HISTORY_DATABASE)
+            
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "mode": (["single_file", "incremental_file"],),
+                "index": ("INT", {"default": 0, "min": 0, "max": 150000, "step": 1}),
+                "label": ("STRING", {"default": 'Batch 001', "multiline": False}),
+                "path": ("STRING", {"default": './ComfyUI/input/', "multiline": False}),
+                "pattern": ("STRING", {"default": '*', "multiline": False}),
+            },
+        }
+
+    RETURN_TYPES = (TEXT_TYPE,TEXT_TYPE)
+    RETURN_NAMES = ("text","filename_text")
+    FUNCTION = "load_batch_files"
+
+    CATEGORY = "WAS Suite/IO"
+
+    def load_batch_files(self, path, pattern='*', index=0, mode="single_file", label='Batch 001'):
+        
+        if not os.path.exists(path):
+            return (None, )
+        fl = self.BatchFileLoader(path, label, pattern)
+        new_paths = fl.file_paths
+        if mode == 'single_file':
+            file, filename = fl.get_file_by_id(index)
+        else:
+            file, filename = fl.get_next_file()
+
+        # Update history
+        update_history_text_files(new_paths)
+
+        return (file, filename)
+
+    class BatchFileLoader:
+        def __init__(self, directory_path, label, pattern):
+            self.WDB = WDB
+            self.file_paths = []
+            self.load_files(directory_path, pattern)
+            self.file_paths.sort()  # sort the file paths by name
+            stored_directory_path = self.WDB.get('Text File Batch Paths', label)
+            stored_pattern = self.WDB.get('Text File Batch Patterns', label)
+            if stored_directory_path != directory_path or stored_pattern != pattern:
+                self.index = 0
+                self.WDB.insert('Text File Batch Counters', label, 0)
+                self.WDB.insert('Text File Batch Paths', label, directory_path)
+                self.WDB.insert('Text File Batch Patterns', label, pattern)
+            else:
+                self.index = self.WDB.get('Text File Batch Counters', label)
+            self.label = label
+
+        def load_files(self, directory_path, pattern):
+            allowed_extensions = ('.txt')
+            for file_name in glob.glob(os.path.join(directory_path, pattern), recursive=True):
+                if file_name.lower().endswith(allowed_extensions):
+                    file_path = os.path.join(directory_path, file_name)
+                    self.file_paths.append(file_path)
+
+        def get_file_by_id(self, file_id):
+            if file_id < 0 or file_id >= len(self.file_paths):
+                raise ValueError(f"\033[34mWAS NS\033[0m Error: Invalid file index `{file_id}`")
+            return (self.read_file_content(self.file_paths[file_id]), os.path.basename(self.file_paths[file_id]))
+
+        def get_next_file(self):
+            if self.index >= len(self.file_paths):
+                self.index = 0
+            file_path = self.file_paths[self.index]
+            self.index += 1
+            if self.index == len(self.file_paths):
+                self.index = 0
+            print(f'\033[34mWAS NS \033[33m{self.label}\033[0m Index:', self.index)
+            self.WDB.insert('Text File Batch Counters', self.label, self.index)
+            return (self.read_file_content(file_path), os.path.basename(file_path))
+        
+        def read_file_content(self, file_path):
+            with open(file_path, 'r', encoding='utf-8') as file:
+                content = file.read()
+            return content
+
+    @classmethod
+    def IS_CHANGED(cls, **kwargs):
+        return float("NaN")        
 
 class WAS_Text_To_String:
     def __init__(self):
@@ -6447,6 +6536,7 @@ NODE_CLASS_MAPPINGS = {
     "Latent Upscale by Factor (WAS)": WAS_Latent_Upscale,
     "Load Image Batch": WAS_Load_Image_Batch,
     "Load Text File": WAS_Text_Load_From_File,
+    "Load Text File Batch" : WAS_Load_Text_File_Batch,
     "MiDaS Depth Approximation": MiDaS_Depth_Approx,
     "MiDaS Mask Image": MiDaS_Background_Foreground_Removal,
     "Number Operation": WAS_Number_Operation,

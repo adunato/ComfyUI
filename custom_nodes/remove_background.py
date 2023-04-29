@@ -138,7 +138,7 @@ class CalculateImageBounds:
         output_image_bounds = [rmin, rmin+pil_image.height, cmin, cmin+pil_image.width]
         print(f"calculate_image_bounds: {output_image_bounds}")
         return (output_image_bounds,)
-
+   
 
 NODE_CLASS_MAPPINGS = {
     "RemoveBackground": RemoveBackground,
