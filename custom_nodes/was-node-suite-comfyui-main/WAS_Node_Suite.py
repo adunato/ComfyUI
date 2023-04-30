@@ -3589,8 +3589,8 @@ class WAS_Image_Save:
         return {
             "required": {
                 "images": ("IMAGE", ),
+                "filename_prefix": (TEXT_TYPE,),
                 "output_path": ("STRING", {"default": './ComfyUI/output', "multiline": False}),
-                "filename_prefix": ("STRING", {"default": "ComfyUI"}),
                 "extension": (['png', 'jpeg', 'tiff', 'gif'], ),
                 "quality": ("INT", {"default": 100, "min": 1, "max": 100, "step": 1}),
                 "overwrite_mode": (["false", "prefix_as_filename"],),
@@ -3607,7 +3607,7 @@ class WAS_Image_Save:
 
     CATEGORY = "WAS Suite/IO"
 
-    def save_images(self, images, output_path='', filename_prefix="ComfyUI", extension='png', quality=100, prompt=None, extra_pnginfo=None, overwrite_mode='false'):
+    def save_images(self, images, filename_prefix="ComfyUI", output_path='',  extension='png', quality=100, prompt=None, extra_pnginfo=None, overwrite_mode='false'):
         def map_filename(filename):
             prefix_len = len(filename_prefix)
             prefix = filename[:prefix_len + 1]
@@ -5202,12 +5202,14 @@ class WAS_Load_Text_File_Lines:
             return lines
 
         def get_next_line(self):
+            print(f"get_next_line: {self.index}")
             if self.index >= len(self.file_lines):
+                print(f"self.index: {self.index} len(self.file_lines): {len(self.file_lines)}")
                 self.index = 0
             print(f'\033[34mWAS NS \033[33m{self.label}\033[0m Index:', self.index)
-            self.WDB.insert('Text File Counters', self.label, self.index)
             file_line = self.file_lines[self.index]
             self.index += 1
+            self.WDB.insert('Text File Counters', self.label, self.index)
             return (file_line, os.path.basename(self.file_path))
 
         def get_line_by_id(self, line_id):

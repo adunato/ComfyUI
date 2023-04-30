@@ -1,6 +1,6 @@
 {
-  "last_node_id": 141,
-  "last_link_id": 255,
+  "last_node_id": 153,
+  "last_link_id": 278,
   "nodes": [
     {
       "id": 20,
@@ -14,7 +14,7 @@
         "1": 250
       },
       "flags": {},
-      "order": 13,
+      "order": 22,
       "mode": 0,
       "inputs": [
         {
@@ -64,44 +64,18 @@
       ]
     },
     {
-      "id": 80,
-      "type": "SaveImage",
-      "pos": [
-        3513.6535616812357,
-        -1012.9893388146475
-      ],
-      "size": {
-        "0": 315,
-        "1": 250
-      },
-      "flags": {},
-      "order": 27,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "images",
-          "type": "IMAGE",
-          "link": 137
-        }
-      ],
-      "properties": {},
-      "widgets_values": [
-        "Emma_Roberts-Britt_Robertson"
-      ]
-    },
-    {
       "id": 89,
       "type": "PreviewImage",
       "pos": [
-        931,
-        -881
+        1003.9459266845696,
+        -885.6629508984374
       ],
       "size": {
         "0": 210,
         "1": 250
       },
       "flags": {},
-      "order": 10,
+      "order": 12,
       "mode": 0,
       "inputs": [
         {
@@ -118,8 +92,8 @@
       "id": 86,
       "type": "ControlNetLoader",
       "pos": [
-        534,
-        -1017
+        606.9459266845696,
+        -1021.6629508984374
       ],
       "size": {
         "0": 315,
@@ -148,8 +122,8 @@
       "id": 76,
       "type": "MMDetLoader",
       "pos": [
-        3138.567250887498,
-        -1033.5526813632803
+        3127.0195109656233,
+        -1024.226657496093
       ],
       "size": {
         "0": 315,
@@ -185,15 +159,15 @@
       "id": 77,
       "type": "BboxDetectorForEach",
       "pos": [
-        3131.259916374996,
-        -894.5014191152335
+        3119.712176453121,
+        -885.1753952480461
       ],
       "size": {
         "0": 315,
         "1": 126
       },
       "flags": {},
-      "order": 25,
+      "order": 34,
       "mode": 0,
       "inputs": [
         {
@@ -238,7 +212,7 @@
         "1": 262
       },
       "flags": {},
-      "order": 11,
+      "order": 19,
       "mode": 0,
       "inputs": [
         {
@@ -277,7 +251,7 @@
         "Node name for S&R": "KSampler"
       },
       "widgets_values": [
-        391433492646862,
+        909558315922098,
         "randomize",
         20,
         8,
@@ -290,8 +264,8 @@
       "id": 87,
       "type": "OpenposePreprocessor",
       "pos": [
-        445,
-        -912
+        517.9459266845702,
+        -916.6629508984374
       ],
       "size": {
         "0": 315,
@@ -341,7 +315,7 @@
         "1": 46
       },
       "flags": {},
-      "order": 12,
+      "order": 21,
       "mode": 0,
       "inputs": [
         {
@@ -382,7 +356,7 @@
         "1": 178
       },
       "flags": {},
-      "order": 14,
+      "order": 23,
       "mode": 0,
       "inputs": [
         {
@@ -416,293 +390,6 @@
       ]
     },
     {
-      "id": 85,
-      "type": "ControlNetApply",
-      "pos": [
-        485,
-        -671
-      ],
-      "size": {
-        "0": 317.4000244140625,
-        "1": 98
-      },
-      "flags": {},
-      "order": 9,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "conditioning",
-          "type": "CONDITIONING",
-          "link": 149
-        },
-        {
-          "name": "control_net",
-          "type": "CONTROL_NET",
-          "link": 147,
-          "slot_index": 1
-        },
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "link": 150,
-          "slot_index": 2
-        }
-      ],
-      "outputs": [
-        {
-          "name": "CONDITIONING",
-          "type": "CONDITIONING",
-          "links": [
-            152
-          ],
-          "slot_index": 0
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "ControlNetApply"
-      },
-      "widgets_values": [
-        1
-      ]
-    },
-    {
-      "id": 4,
-      "type": "CheckpointLoaderSimple",
-      "pos": [
-        1530,
-        -957
-      ],
-      "size": {
-        "0": 315,
-        "1": 98
-      },
-      "flags": {},
-      "order": 3,
-      "mode": 0,
-      "outputs": [
-        {
-          "name": "MODEL",
-          "type": "MODEL",
-          "links": [
-            1,
-            131,
-            208
-          ],
-          "slot_index": 0
-        },
-        {
-          "name": "CLIP",
-          "type": "CLIP",
-          "links": [
-            3,
-            5
-          ],
-          "slot_index": 1
-        },
-        {
-          "name": "VAE",
-          "type": "VAE",
-          "links": [],
-          "slot_index": 2
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "CheckpointLoaderSimple"
-      },
-      "widgets_values": [
-        "realisticVisionV20_v20.safetensors"
-      ]
-    },
-    {
-      "id": 21,
-      "type": "VAELoader",
-      "pos": [
-        2006,
-        -960
-      ],
-      "size": {
-        "0": 315,
-        "1": 58
-      },
-      "flags": {},
-      "order": 4,
-      "mode": 0,
-      "outputs": [
-        {
-          "name": "VAE",
-          "type": "VAE",
-          "links": [
-            21,
-            130,
-            209
-          ],
-          "slot_index": 0
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "VAELoader"
-      },
-      "widgets_values": [
-        "vae-ft-mse-840000-ema-pruned.ckpt"
-      ]
-    },
-    {
-      "id": 6,
-      "type": "CLIPTextEncode",
-      "pos": [
-        1461,
-        -748
-      ],
-      "size": {
-        "0": 422.84503173828125,
-        "1": 164.31304931640625
-      },
-      "flags": {},
-      "order": 6,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "clip",
-          "type": "CLIP",
-          "link": 3
-        }
-      ],
-      "outputs": [
-        {
-          "name": "CONDITIONING",
-          "type": "CONDITIONING",
-          "links": [
-            132,
-            149,
-            210
-          ],
-          "slot_index": 0
-        }
-      ],
-      "title": "Positive Prompt",
-      "properties": {
-        "Node name for S&R": "CLIPTextEncode"
-      },
-      "widgets_values": [
-        "[Emma Roberts | Britt Robertson], ponytail, standing in front of the camera, leather brown jacket,  jeans, survivor, closed mouth, scruffy, dirty, wasteland, apocalyptic urban scene in the background"
-      ]
-    },
-    {
-      "id": 7,
-      "type": "CLIPTextEncode",
-      "pos": [
-        1961,
-        -734
-      ],
-      "size": {
-        "0": 425.27801513671875,
-        "1": 180.6060791015625
-      },
-      "flags": {},
-      "order": 7,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "clip",
-          "type": "CLIP",
-          "link": 5
-        }
-      ],
-      "outputs": [
-        {
-          "name": "CONDITIONING",
-          "type": "CONDITIONING",
-          "links": [
-            6,
-            133,
-            211
-          ],
-          "slot_index": 0
-        }
-      ],
-      "title": "Negative Prompt",
-      "properties": {
-        "Node name for S&R": "CLIPTextEncode"
-      },
-      "widgets_values": [
-        "holding object, makeup, nsfw, open mouth, glasses, hoodie, covered face, helmet, cropped, lowres, poorly drawn face, out of frame, poorly drawn hands, blurry, bad art, blurred, text, watermark, disfigured, deformed, closed eyes"
-      ]
-    },
-    {
-      "id": 78,
-      "type": "DetailerForEach",
-      "pos": [
-        3159.567250887498,
-        -696.5526813632804
-      ],
-      "size": {
-        "0": 315,
-        "1": 422
-      },
-      "flags": {},
-      "order": 26,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "link": 214
-        },
-        {
-          "name": "segs",
-          "type": "SEGS",
-          "link": 129
-        },
-        {
-          "name": "model",
-          "type": "MODEL",
-          "link": 131
-        },
-        {
-          "name": "vae",
-          "type": "VAE",
-          "link": 130
-        },
-        {
-          "name": "positive",
-          "type": "CONDITIONING",
-          "link": 132
-        },
-        {
-          "name": "negative",
-          "type": "CONDITIONING",
-          "link": 133
-        }
-      ],
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            137
-          ],
-          "slot_index": 0
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "DetailerForEach"
-      },
-      "widgets_values": [
-        256,
-        "bbox",
-        902702382835634,
-        "randomize",
-        20,
-        8,
-        "euler",
-        "karras",
-        0.5,
-        5,
-        "enabled",
-        "disabled"
-      ]
-    },
-    {
       "id": 121,
       "type": "PreviewImage",
       "pos": [
@@ -714,7 +401,7 @@
         "1": 250
       },
       "flags": {},
-      "order": 21,
+      "order": 30,
       "mode": 0,
       "inputs": [
         {
@@ -739,7 +426,7 @@
         "1": 26
       },
       "flags": {},
-      "order": 16,
+      "order": 25,
       "mode": 0,
       "inputs": [
         {
@@ -774,7 +461,7 @@
         "1": 26
       },
       "flags": {},
-      "order": 18,
+      "order": 27,
       "mode": 0,
       "inputs": [
         {
@@ -811,7 +498,7 @@
         "1": 58
       },
       "flags": {},
-      "order": 17,
+      "order": 26,
       "mode": 0,
       "inputs": [
         {
@@ -849,7 +536,7 @@
         "1": 26
       },
       "flags": {},
-      "order": 19,
+      "order": 28,
       "mode": 0,
       "inputs": [
         {
@@ -884,7 +571,7 @@
         "1": 250
       },
       "flags": {},
-      "order": 15,
+      "order": 24,
       "mode": 0,
       "inputs": [
         {
@@ -898,82 +585,6 @@
       }
     },
     {
-      "id": 118,
-      "type": "DetailerForEach",
-      "pos": [
-        2650,
-        -720
-      ],
-      "size": {
-        "0": 315,
-        "1": 422
-      },
-      "flags": {},
-      "order": 23,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "link": 207
-        },
-        {
-          "name": "segs",
-          "type": "SEGS",
-          "link": 241
-        },
-        {
-          "name": "model",
-          "type": "MODEL",
-          "link": 208
-        },
-        {
-          "name": "vae",
-          "type": "VAE",
-          "link": 209
-        },
-        {
-          "name": "positive",
-          "type": "CONDITIONING",
-          "link": 210
-        },
-        {
-          "name": "negative",
-          "type": "CONDITIONING",
-          "link": 211
-        }
-      ],
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            212,
-            213,
-            214
-          ],
-          "slot_index": 0
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "DetailerForEach"
-      },
-      "widgets_values": [
-        640,
-        "bbox",
-        646179041141793,
-        "randomize",
-        20,
-        8,
-        "euler",
-        "karras",
-        0.5,
-        5,
-        "disabled",
-        "disabled"
-      ]
-    },
-    {
       "id": 119,
       "type": "PreviewImage",
       "pos": [
@@ -985,7 +596,7 @@
         "1": 250
       },
       "flags": {},
-      "order": 24,
+      "order": 33,
       "mode": 0,
       "inputs": [
         {
@@ -999,18 +610,320 @@
       }
     },
     {
+      "id": 88,
+      "type": "LoadImage",
+      "pos": [
+        164.94592668457042,
+        -1011.6629508984374
+      ],
+      "size": {
+        "0": 315,
+        "1": 345
+      },
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            151
+          ]
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "woman-03 (1).png",
+        "image"
+      ]
+    },
+    {
+      "id": 78,
+      "type": "DetailerForEach",
+      "pos": [
+        3148.0195109656233,
+        -687.226657496093
+      ],
+      "size": {
+        "0": 315,
+        "1": 422
+      },
+      "flags": {},
+      "order": 35,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 214
+        },
+        {
+          "name": "segs",
+          "type": "SEGS",
+          "link": 129
+        },
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 131
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 130
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 270
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 133
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            267
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "DetailerForEach"
+      },
+      "widgets_values": [
+        256,
+        "bbox",
+        949713986403335,
+        "randomize",
+        20,
+        8,
+        "euler",
+        "karras",
+        0.5,
+        5,
+        "enabled",
+        "disabled"
+      ]
+    },
+    {
+      "id": 145,
+      "type": "Text Multiline",
+      "pos": [
+        1565.1883962109373,
+        -1404.2971837109374
+      ],
+      "size": {
+        "0": 400,
+        "1": 200
+      },
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "outputs": [
+        {
+          "name": "ASCII",
+          "type": "ASCII",
+          "links": [
+            258
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "Text Multiline"
+      },
+      "widgets_values": [
+        ", ponytail, standing in front of the camera, leather brown jacket,  jeans, survivor, closed mouth, scruffy, dirty, wasteland, apocalyptic urban scene in the background"
+      ]
+    },
+    {
+      "id": 4,
+      "type": "CheckpointLoaderSimple",
+      "pos": [
+        1578.945362109374,
+        -1011.7790163671875
+      ],
+      "size": {
+        "0": 315,
+        "1": 98
+      },
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            1,
+            131,
+            208
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            5,
+            260
+          ],
+          "slot_index": 1
+        },
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [],
+          "slot_index": 2
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CheckpointLoaderSimple"
+      },
+      "widgets_values": [
+        "realisticVisionV20_v20.safetensors"
+      ]
+    },
+    {
+      "id": 21,
+      "type": "VAELoader",
+      "pos": [
+        1569.945362109374,
+        -863.7790163671875
+      ],
+      "size": {
+        "0": 315,
+        "1": 58
+      },
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "outputs": [
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            21,
+            130,
+            209
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAELoader"
+      },
+      "widgets_values": [
+        "vae-ft-mse-840000-ema-pruned.ckpt"
+      ]
+    },
+    {
+      "id": 7,
+      "type": "CLIPTextEncode",
+      "pos": [
+        1577.945362109374,
+        -758.7790163671875
+      ],
+      "size": {
+        "0": 425.27801513671875,
+        "1": 180.6060791015625
+      },
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 5
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            6,
+            133,
+            211
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "Negative Prompt",
+      "properties": {
+        "Node name for S&R": "CLIPTextEncode"
+      },
+      "widgets_values": [
+        "holding object, makeup, nsfw, open mouth, glasses, hoodie, covered face, helmet, cropped, lowres, poorly drawn face, out of frame, poorly drawn hands, blurry, bad art, blurred, text, watermark, disfigured, deformed, closed eyes"
+      ]
+    },
+    {
+      "id": 116,
+      "type": "MaskToSEGS",
+      "pos": [
+        2667,
+        -1016
+      ],
+      "size": {
+        "0": 315,
+        "1": 82
+      },
+      "flags": {},
+      "order": 29,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "mask",
+          "type": "MASK",
+          "link": 239
+        }
+      ],
+      "outputs": [
+        {
+          "name": "SEGS",
+          "type": "SEGS",
+          "links": [
+            231
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "MaskToSEGS"
+      },
+      "widgets_values": [
+        "True",
+        1
+      ]
+    },
+    {
       "id": 129,
       "type": "Segs & Mask",
       "pos": [
-        2705,
-        -861
+        2723,
+        -847
       ],
       "size": {
         "0": 210,
         "1": 46
       },
       "flags": {},
-      "order": 22,
+      "order": 31,
       "mode": 0,
       "inputs": [
         {
@@ -1039,11 +952,501 @@
       }
     },
     {
-      "id": 116,
-      "type": "MaskToSEGS",
+      "id": 118,
+      "type": "DetailerForEach",
       "pos": [
-        2640,
-        -1014
+        2665,
+        -672
+      ],
+      "size": {
+        "0": 315,
+        "1": 422
+      },
+      "flags": {},
+      "order": 32,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 207
+        },
+        {
+          "name": "segs",
+          "type": "SEGS",
+          "link": 241
+        },
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 208
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 209
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 271
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 211
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            212,
+            213,
+            214
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "DetailerForEach"
+      },
+      "widgets_values": [
+        640,
+        "bbox",
+        761885282542351,
+        "randomize",
+        20,
+        8,
+        "euler",
+        "karras",
+        0.5,
+        5,
+        "disabled",
+        "disabled"
+      ]
+    },
+    {
+      "id": 85,
+      "type": "ControlNetApply",
+      "pos": [
+        563,
+        -676
+      ],
+      "size": {
+        "0": 317.4000244140625,
+        "1": 98
+      },
+      "flags": {},
+      "order": 17,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "conditioning",
+          "type": "CONDITIONING",
+          "link": 272
+        },
+        {
+          "name": "control_net",
+          "type": "CONTROL_NET",
+          "link": 147,
+          "slot_index": 1
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 150,
+          "slot_index": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            152
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ControlNetApply"
+      },
+      "widgets_values": [
+        1
+      ]
+    },
+    {
+      "id": 146,
+      "type": "Text Find and Replace",
+      "pos": [
+        1572,
+        -1552
+      ],
+      "size": {
+        "0": 315,
+        "1": 82
+      },
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "text",
+          "type": "ASCII",
+          "link": 259
+        }
+      ],
+      "outputs": [
+        {
+          "name": "ASCII",
+          "type": "ASCII",
+          "links": [
+            257
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "Text Find and Replace"
+      },
+      "widgets_values": [
+        "\\n",
+        ""
+      ]
+    },
+    {
+      "id": 149,
+      "type": "Image Save",
+      "pos": [
+        3604,
+        -401
+      ],
+      "size": {
+        "0": 315,
+        "1": 150
+      },
+      "flags": {},
+      "order": 36,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 267
+        },
+        {
+          "name": "filename_prefix",
+          "type": "ASCII",
+          "link": 278
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "Image Save"
+      },
+      "widgets_values": [
+        "F:\\StableDiffusion\\ComfyUI\\output",
+        "png",
+        100,
+        "false"
+      ]
+    },
+    {
+      "id": 142,
+      "type": "Text to Conditioning",
+      "pos": [
+        2041,
+        -1246
+      ],
+      "size": {
+        "0": 216.59999084472656,
+        "1": 46
+      },
+      "flags": {},
+      "order": 15,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 260
+        },
+        {
+          "name": "text",
+          "type": "ASCII",
+          "link": 256
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            270,
+            271,
+            272
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "Text to Conditioning"
+      }
+    },
+    {
+      "id": 144,
+      "type": "Text Concatenate",
+      "pos": [
+        2023,
+        -1437
+      ],
+      "size": {
+        "0": 315,
+        "1": 118
+      },
+      "flags": {},
+      "order": 13,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "text_a",
+          "type": "ASCII",
+          "link": 257
+        },
+        {
+          "name": "text_b",
+          "type": "ASCII",
+          "link": 258
+        },
+        {
+          "name": "text_c",
+          "type": "ASCII",
+          "link": null
+        },
+        {
+          "name": "text_d",
+          "type": "ASCII",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "ASCII",
+          "type": "ASCII",
+          "links": [
+            256
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "Text Concatenate"
+      },
+      "widgets_values": [
+        "false"
+      ]
+    },
+    {
+      "id": 143,
+      "type": "Load Text File Lines",
+      "pos": [
+        1572.1883962109373,
+        -1751.2971837109374
+      ],
+      "size": {
+        "0": 315,
+        "1": 150
+      },
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "outputs": [
+        {
+          "name": "text",
+          "type": "ASCII",
+          "links": [
+            259,
+            274
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "filename_text",
+          "type": "ASCII",
+          "links": [],
+          "slot_index": 1
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "Load Text File Lines"
+      },
+      "widgets_values": [
+        "incremental_line",
+        0,
+        "Batch 001",
+        "E:\\My Drive\\dreams-art\\stories-generation\\development\\character_prompts\\female_actors.txt"
+      ]
+    },
+    {
+      "id": 152,
+      "type": "Reroute",
+      "pos": [
+        3736,
+        -1059
+      ],
+      "size": [
+        75,
+        26
+      ],
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "",
+          "type": "*",
+          "link": 274
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "ASCII",
+          "links": [
+            275
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "showOutputText": false,
+        "horizontal": false
+      }
+    },
+    {
+      "id": 151,
+      "type": "Text Find and Replace",
+      "pos": [
+        3610,
+        -980
+      ],
+      "size": {
+        "0": 315,
+        "1": 82
+      },
+      "flags": {},
+      "order": 14,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "text",
+          "type": "ASCII",
+          "link": 275
+        }
+      ],
+      "outputs": [
+        {
+          "name": "ASCII",
+          "type": "ASCII",
+          "links": [
+            276
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "Text Find and Replace"
+      },
+      "widgets_values": [
+        "\\[|\\]",
+        ""
+      ]
+    },
+    {
+      "id": 148,
+      "type": "Text Find and Replace",
+      "pos": [
+        3606,
+        -845
+      ],
+      "size": {
+        "0": 315,
+        "1": 82
+      },
+      "flags": {},
+      "order": 16,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "text",
+          "type": "ASCII",
+          "link": 276
+        }
+      ],
+      "outputs": [
+        {
+          "name": "ASCII",
+          "type": "ASCII",
+          "links": [
+            266
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "Text Find and Replace"
+      },
+      "widgets_values": [
+        "\\|",
+        "_"
+      ]
+    },
+    {
+      "id": 150,
+      "type": "Text Find and Replace",
+      "pos": [
+        3606,
+        -711
+      ],
+      "size": {
+        "0": 315,
+        "1": 82
+      },
+      "flags": {},
+      "order": 18,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "text",
+          "type": "ASCII",
+          "link": 266
+        }
+      ],
+      "outputs": [
+        {
+          "name": "ASCII",
+          "type": "ASCII",
+          "links": [
+            277
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "Text Find and Replace"
+      },
+      "widgets_values": [
+        "\\n",
+        ""
+      ]
+    },
+    {
+      "id": 153,
+      "type": "Text Find and Replace",
+      "pos": [
+        3613,
+        -563
       ],
       "size": {
         "0": 315,
@@ -1054,63 +1457,27 @@
       "mode": 0,
       "inputs": [
         {
-          "name": "mask",
-          "type": "MASK",
-          "link": 239
+          "name": "text",
+          "type": "ASCII",
+          "link": 277
         }
       ],
       "outputs": [
         {
-          "name": "SEGS",
-          "type": "SEGS",
+          "name": "ASCII",
+          "type": "ASCII",
           "links": [
-            231
+            278
           ],
           "slot_index": 0
         }
       ],
       "properties": {
-        "Node name for S&R": "MaskToSEGS"
+        "Node name for S&R": "Text Find and Replace"
       },
       "widgets_values": [
-        "True",
-        1
-      ]
-    },
-    {
-      "id": 88,
-      "type": "LoadImage",
-      "pos": [
-        92,
-        -1007
-      ],
-      "size": {
-        "0": 315,
-        "1": 345
-      },
-      "flags": {},
-      "order": 5,
-      "mode": 0,
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            151
-          ]
-        },
-        {
-          "name": "MASK",
-          "type": "MASK",
-          "links": null
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "LoadImage"
-      },
-      "widgets_values": [
-        "woman-03 (1).png",
-        "image"
+        " ",
+        ""
       ]
     }
   ],
@@ -1122,14 +1489,6 @@
       3,
       0,
       "MODEL"
-    ],
-    [
-      3,
-      4,
-      1,
-      6,
-      0,
-      "CLIP"
     ],
     [
       5,
@@ -1212,28 +1571,12 @@
       "MODEL"
     ],
     [
-      132,
-      6,
-      0,
-      78,
-      4,
-      "CONDITIONING"
-    ],
-    [
       133,
       7,
       0,
       78,
       5,
       "CONDITIONING"
-    ],
-    [
-      137,
-      78,
-      0,
-      80,
-      0,
-      "IMAGE"
     ],
     [
       145,
@@ -1250,14 +1593,6 @@
       85,
       1,
       "CONTROL_NET"
-    ],
-    [
-      149,
-      6,
-      0,
-      85,
-      0,
-      "CONDITIONING"
     ],
     [
       150,
@@ -1314,14 +1649,6 @@
       118,
       3,
       "VAE"
-    ],
-    [
-      210,
-      6,
-      0,
-      118,
-      4,
-      "CONDITIONING"
     ],
     [
       211,
@@ -1434,6 +1761,126 @@
       83,
       0,
       "IMAGE"
+    ],
+    [
+      256,
+      144,
+      0,
+      142,
+      1,
+      "ASCII"
+    ],
+    [
+      257,
+      146,
+      0,
+      144,
+      0,
+      "ASCII"
+    ],
+    [
+      258,
+      145,
+      0,
+      144,
+      1,
+      "ASCII"
+    ],
+    [
+      259,
+      143,
+      0,
+      146,
+      0,
+      "ASCII"
+    ],
+    [
+      260,
+      4,
+      1,
+      142,
+      0,
+      "CLIP"
+    ],
+    [
+      266,
+      148,
+      0,
+      150,
+      0,
+      "ASCII"
+    ],
+    [
+      267,
+      78,
+      0,
+      149,
+      0,
+      "IMAGE"
+    ],
+    [
+      270,
+      142,
+      0,
+      78,
+      4,
+      "CONDITIONING"
+    ],
+    [
+      271,
+      142,
+      0,
+      118,
+      4,
+      "CONDITIONING"
+    ],
+    [
+      272,
+      142,
+      0,
+      85,
+      0,
+      "CONDITIONING"
+    ],
+    [
+      274,
+      143,
+      0,
+      152,
+      0,
+      "*"
+    ],
+    [
+      275,
+      152,
+      0,
+      151,
+      0,
+      "ASCII"
+    ],
+    [
+      276,
+      151,
+      0,
+      148,
+      0,
+      "ASCII"
+    ],
+    [
+      277,
+      150,
+      0,
+      153,
+      0,
+      "ASCII"
+    ],
+    [
+      278,
+      153,
+      0,
+      149,
+      1,
+      "ASCII"
     ]
   ],
   "groups": [
@@ -1450,20 +1897,20 @@
     {
       "title": "Model & Prompts",
       "bounding": [
-        1460,
-        -1102,
-        989,
-        583
+        1533,
+        -1101,
+        899,
+        582
       ],
       "color": "#3f789e"
     },
     {
       "title": "Face Pass",
       "bounding": [
-        3105,
-        -1109,
-        727,
-        1244
+        3093,
+        -1100,
+        427,
+        886
       ],
       "color": "#3f789e"
     },
@@ -1480,20 +1927,40 @@
     {
       "title": "Control Net",
       "bounding": [
-        89,
-        -1101,
+        162,
+        -1106,
         1327,
         581
       ],
       "color": "#3f789e"
     },
     {
-      "title": "Group",
+      "title": "Character Pass",
       "bounding": [
         2491,
         -1101,
         561,
         1235
+      ],
+      "color": "#3f789e"
+    },
+    {
+      "title": "Save Files",
+      "bounding": [
+        3553,
+        -1099,
+        420,
+        896
+      ],
+      "color": "#3f789e"
+    },
+    {
+      "title": "Batch Prompt Loading",
+      "bounding": [
+        1538,
+        -1870,
+        837,
+        751
       ],
       "color": "#3f789e"
     }
