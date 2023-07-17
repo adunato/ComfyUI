@@ -1,3 +1,5 @@
+import { api } from "./api.js"
+
 function getNumberDefaults(inputData, defaultStep) {
 	let defaultVal = inputData[1]["default"];
 	let { min, max, step } = inputData[1];
@@ -19,35 +21,60 @@ export function addValueControlWidget(node, targetWidget, defaultValue = "random
 
 		var v = valueControl.value;
 
-		let min = targetWidget.options.min;
-		let max = targetWidget.options.max;
-		// limit to something that javascript can handle
-		max = Math.min(1125899906842624, max);
-		min = Math.max(-1125899906842624, min);
-		let range = (max - min) / (targetWidget.options.step / 10);
+		if (targetWidget.type == "combo" && v !== "fixed") {
+			let current_index = targetWidget.options.values.indexOf(targetWidget.value);
+			let current_length = targetWidget.options.values.length;
 
-		//adjust values based on valueControl Behaviour
-		switch (v) {
-			case "fixed":
-				break;
-			case "increment":
-				targetWidget.value += targetWidget.options.step / 10;
-				break;
-			case "decrement":
-				targetWidget.value -= targetWidget.options.step / 10;
-				break;
-			case "randomize":
-				targetWidget.value = Math.floor(Math.random() * range) * (targetWidget.options.step / 10) + min;
-			default:
-				break;
+			switch (v) {
+				case "increment":
+					current_index += 1;
+					break;
+				case "decrement":
+					current_index -= 1;
+					break;
+				case "randomize":
+					current_index = Math.floor(Math.random() * current_length);
+				default:
+					break;
+			}
+			current_index = Math.max(0, current_index);
+			current_index = Math.min(current_length - 1, current_index);
+			if (current_index >= 0) {
+				let value = targetWidget.options.values[current_index];
+				targetWidget.value = value;
+				targetWidget.callback(value);
+			}
+		} else { //number
+			let min = targetWidget.options.min;
+			let max = targetWidget.options.max;
+			// limit to something that javascript can handle
+			max = Math.min(1125899906842624, max);
+			min = Math.max(-1125899906842624, min);
+			let range = (max - min) / (targetWidget.options.step / 10);
+
+			//adjust values based on valueControl Behaviour
+			switch (v) {
+				case "fixed":
+					break;
+				case "increment":
+					targetWidget.value += targetWidget.options.step / 10;
+					break;
+				case "decrement":
+					targetWidget.value -= targetWidget.options.step / 10;
+					break;
+				case "randomize":
+					targetWidget.value = Math.floor(Math.random() * range) * (targetWidget.options.step / 10) + min;
+				default:
+					break;
+			}
+		/*check if values are over or under their respective
+		* ranges and set them to min or max.*/
+			if (targetWidget.value < min)
+				targetWidget.value = min;
+
+			if (targetWidget.value > max)
+				targetWidget.value = max;
 		}
-	/*check if values are over or under their respective
-	 * ranges and set them to min or max.*/
-		if (targetWidget.value < min)
-			targetWidget.value = min;
-
-		if (targetWidget.value > max)
-			targetWidget.value = max;
 	}
 	return valueControl;	
 };
@@ -90,12 +117,12 @@ function addMultilineWidget(node, name, opts, app) {
 
 		// See how large each text input can be
 		freeSpace -= widgetHeight;
-		freeSpace /= multi.length;
+		freeSpace /= multi.length + (!!node.imgs?.length);
 
 		if (freeSpace < MIN_SIZE) {
 			// There isnt enough space for all the widgets, increase the size of the node
 			freeSpace = MIN_SIZE;
-			node.size[1] = y + widgetHeight + freeSpace * multi.length;
+			node.size[1] = y + widgetHeight + freeSpace * (multi.length + (!!node.imgs?.length));
 			node.graph.setDirtyCanvas(true);
 		}
 
@@ -104,6 +131,7 @@ function addMultilineWidget(node, name, opts, app) {
 			w.y = y;
 			if (w.type === "customtext") {
 				y += freeSpace;
+				w.computedHeight = freeSpace - multi.length*4;
 			} else if (w.computeSize) {
 				y += w.computeSize()[1] + 4;
 			} else {
@@ -130,18 +158,25 @@ function addMultilineWidget(node, name, opts, app) {
 				computeSize(node.size);
 			}
 			const visible = app.canvas.ds.scale > 0.5 && this.type === "customtext";
-			const t = ctx.getTransform();
 			const margin = 10;
+			const elRect = ctx.canvas.getBoundingClientRect();
+			const transform = new DOMMatrix()
+				.scaleSelf(elRect.width / ctx.canvas.width, elRect.height / ctx.canvas.height)
+				.multiplySelf(ctx.getTransform())
+				.translateSelf(margin, margin + y);
+
+			const scale = new DOMMatrix().scaleSelf(transform.a, transform.d)
 			Object.assign(this.inputEl.style, {
-				left: `${t.a * margin + t.e}px`,
-				top: `${t.d * (y + widgetHeight - margin - 3) + t.f}px`,
-				width: `${(widgetWidth - margin * 2 - 3) * t.a}px`,
-				background: (!node.color)?'':node.color,
-				height: `${(this.parent.inputHeight - margin * 2 - 4) * t.d}px`,
+				transformOrigin: "0 0",
+				transform: scale,
+				left: `${transform.a + transform.e}px`,
+				top: `${transform.d + transform.f}px`,
+				width: `${widgetWidth - (margin * 2)}px`,
+				height: `${this.parent.inputHeight - (margin * 2)}px`,
 				position: "absolute",
+				background: (!node.color)?'':node.color,
 				color: (!node.color)?'':'white',
 				zIndex: app.graph._nodes.indexOf(node),
-				fontSize: `${t.d * 10.0}px`,
 			});
 			this.inputEl.hidden = !visible;
 		},
@@ -261,21 +296,50 @@ export const ComfyWidgets = {
 		let uploadWidget;
 
 		function showImage(name) {
-			// Position the image somewhere sensible
-			if (!node.imageOffset) {
-				node.imageOffset = uploadWidget.last_y ? uploadWidget.last_y + 25 : 75;
-			}
-
 			const img = new Image();
 			img.onload = () => {
 				node.imgs = [img];
 				app.graph.setDirtyCanvas(true);
 			};
-			img.src = `/view?filename=${name}&type=input`;
-			if ((node.size[1] - node.imageOffset) < 100) {
-				node.size[1] = 250 + node.imageOffset;
+			let folder_separator = name.lastIndexOf("/");
+			let subfolder = "";
+			if (folder_separator > -1) {
+				subfolder = name.substring(0, folder_separator);
+				name = name.substring(folder_separator + 1);
 			}
+			img.src = api.apiURL(`/view?filename=${name}&type=input&subfolder=${subfolder}${app.getPreviewFormatParam()}`);
+			node.setSizeForImage?.();
 		}
+
+		var default_value = imageWidget.value;
+		Object.defineProperty(imageWidget, "value", {
+			set : function(value) {
+				this._real_value = value;
+			},
+
+			get : function() {
+				let value = "";
+				if (this._real_value) {
+					value = this._real_value;
+				} else {
+					return default_value;
+				}
+
+				if (value.filename) {
+					let real_value = value;
+					value = "";
+					if (real_value.subfolder) {
+						value = real_value.subfolder + "/";
+					}
+
+					value += real_value.filename;
+
+					if(real_value.type && real_value.type !== "input")
+						value += ` [${real_value.type}]`;
+				}
+				return value;
+			}
+		});
 
 		// Add our own callback to the combo widget to render an image when it changes
 		const cb = node.callback;
@@ -300,7 +364,7 @@ export const ComfyWidgets = {
 				// Wrap file in formdata so it includes filename
 				const body = new FormData();
 				body.append("image", file);
-				const resp = await fetch("/upload/image", {
+				const resp = await api.fetchApi("/upload/image", {
 					method: "POST",
 					body,
 				});

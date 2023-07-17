@@ -3,6 +3,16 @@ class ComfyApi extends EventTarget {
 
 	constructor() {
 		super();
+		this.api_host = location.host;
+		this.api_base = location.pathname.split('/').slice(0, -1).join('/');
+	}
+
+	apiURL(route) {
+		return this.api_base + route;
+	}
+
+	fetchApi(route, options) {
+		return fetch(this.apiURL(route), options);
 	}
 
 	addEventListener(type, callback, options) {
@@ -16,7 +26,7 @@ class ComfyApi extends EventTarget {
 	#pollQueue() {
 		setInterval(async () => {
 			try {
-				const resp = await fetch("/prompt");
+				const resp = await this.fetchApi("/prompt");
 				const status = await resp.json();
 				this.dispatchEvent(new CustomEvent("status", { detail: status }));
 			} catch (error) {
@@ -40,8 +50,9 @@ class ComfyApi extends EventTarget {
 			existingSession = "?clientId=" + existingSession;
 		}
 		this.socket = new WebSocket(
-			`ws${window.location.protocol === "https:" ? "s" : ""}://${location.host}/ws${existingSession}`
+			`ws${window.location.protocol === "https:" ? "s" : ""}://${this.api_host}${this.api_base}/ws${existingSession}`
 		);
+		this.socket.binaryType = "arraybuffer";
 
 		this.socket.addEventListener("open", () => {
 			opened = true;
@@ -70,33 +81,68 @@ class ComfyApi extends EventTarget {
 
 		this.socket.addEventListener("message", (event) => {
 			try {
-				const msg = JSON.parse(event.data);
-				switch (msg.type) {
-					case "status":
-						if (msg.data.sid) {
-							this.clientId = msg.data.sid;
-							window.name = this.clientId;
+				if (event.data instanceof ArrayBuffer) {
+					const view = new DataView(event.data);
+					const eventType = view.getUint32(0);
+					const buffer = event.data.slice(4);
+					switch (eventType) {
+					case 1:
+						const view2 = new DataView(event.data);
+						const imageType = view2.getUint32(0)
+						let imageMime
+						switch (imageType) {
+							case 1:
+							default:
+								imageMime = "image/jpeg";
+								break;
+							case 2:
+								imageMime = "image/png"
 						}
-						this.dispatchEvent(new CustomEvent("status", { detail: msg.data.status }));
-						break;
-					case "progress":
-						this.dispatchEvent(new CustomEvent("progress", { detail: msg.data }));
-						break;
-					case "executing":
-						this.dispatchEvent(new CustomEvent("executing", { detail: msg.data.node }));
-						break;
-					case "executed":
-						this.dispatchEvent(new CustomEvent("executed", { detail: msg.data }));
+						const imageBlob = new Blob([buffer.slice(4)], { type: imageMime });
+						this.dispatchEvent(new CustomEvent("b_preview", { detail: imageBlob }));
 						break;
 					default:
-						if (this.#registered.has(msg.type)) {
-							this.dispatchEvent(new CustomEvent(msg.type, { detail: msg.data }));
-						} else {
-							throw new Error("Unknown message type");
-						}
+						throw new Error(`Unknown binary websocket message of type ${eventType}`);
+					}
+				}
+				else {
+				    const msg = JSON.parse(event.data);
+				    switch (msg.type) {
+					    case "status":
+						    if (msg.data.sid) {
+							    this.clientId = msg.data.sid;
+							    window.name = this.clientId;
+						    }
+						    this.dispatchEvent(new CustomEvent("status", { detail: msg.data.status }));
+						    break;
+					    case "progress":
+						    this.dispatchEvent(new CustomEvent("progress", { detail: msg.data }));
+						    break;
+					    case "executing":
+						    this.dispatchEvent(new CustomEvent("executing", { detail: msg.data.node }));
+						    break;
+					    case "executed":
+						    this.dispatchEvent(new CustomEvent("executed", { detail: msg.data }));
+						    break;
+					    case "execution_start":
+						    this.dispatchEvent(new CustomEvent("execution_start", { detail: msg.data }));
+						    break;
+					    case "execution_error":
+						    this.dispatchEvent(new CustomEvent("execution_error", { detail: msg.data }));
+						    break;
+					    case "execution_cached":
+						    this.dispatchEvent(new CustomEvent("execution_cached", { detail: msg.data }));
+						    break;
+					    default:
+						    if (this.#registered.has(msg.type)) {
+							    this.dispatchEvent(new CustomEvent(msg.type, { detail: msg.data }));
+						    } else {
+							    throw new Error(`Unknown message type ${msg.type}`);
+						    }
+				    }
 				}
 			} catch (error) {
-				console.warn("Unhandled message:", event.data);
+				console.warn("Unhandled message:", event.data, error);
 			}
 		});
 	}
@@ -113,7 +159,7 @@ class ComfyApi extends EventTarget {
 	 * @returns An array of script urls to import
 	 */
 	async getExtensions() {
-		const resp = await fetch("/extensions", { cache: "no-store" });
+		const resp = await this.fetchApi("/extensions", { cache: "no-store" });
 		return await resp.json();
 	}
 
@@ -122,7 +168,7 @@ class ComfyApi extends EventTarget {
 	 * @returns An array of script urls to import
 	 */
 	async getEmbeddings() {
-		const resp = await fetch("/embeddings", { cache: "no-store" });
+		const resp = await this.fetchApi("/embeddings", { cache: "no-store" });
 		return await resp.json();
 	}
 
@@ -131,7 +177,7 @@ class ComfyApi extends EventTarget {
 	 * @returns The node definitions
 	 */
 	async getNodeDefs() {
-		const resp = await fetch("object_info", { cache: "no-store" });
+		const resp = await this.fetchApi("/object_info", { cache: "no-store" });
 		return await resp.json();
 	}
 
@@ -153,7 +199,7 @@ class ComfyApi extends EventTarget {
 			body.number = number;
 		}
 
-		const res = await fetch("/prompt", {
+		const res = await this.fetchApi("/prompt", {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -163,9 +209,11 @@ class ComfyApi extends EventTarget {
 
 		if (res.status !== 200) {
 			throw {
-				response: await res.text(),
+				response: await res.json(),
 			};
 		}
+
+		return await res.json();
 	}
 
 	/**
@@ -186,7 +234,7 @@ class ComfyApi extends EventTarget {
 	 */
 	async getQueue() {
 		try {
-			const res = await fetch("/queue");
+			const res = await this.fetchApi("/queue");
 			const data = await res.json();
 			return {
 				// Running action uses a different endpoint for cancelling
@@ -208,7 +256,7 @@ class ComfyApi extends EventTarget {
 	 */
 	async getHistory() {
 		try {
-			const res = await fetch("/history");
+			const res = await this.fetchApi("/history");
 			return { History: Object.values(await res.json()) };
 		} catch (error) {
 			console.error(error);
@@ -223,7 +271,7 @@ class ComfyApi extends EventTarget {
 	 */
 	async #postItem(type, body) {
 		try {
-			await fetch("/" + type, {
+			await this.fetchApi("/" + type, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",

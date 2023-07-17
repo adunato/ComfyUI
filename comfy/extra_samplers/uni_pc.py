@@ -180,7 +180,6 @@ class NoiseScheduleVP:
 
 def model_wrapper(
     model,
-    sampling_function,
     noise_schedule,
     model_type="noise",
     model_kwargs={},
@@ -295,7 +294,7 @@ def model_wrapper(
         if t_continuous.reshape((-1,)).shape[0] == 1:
             t_continuous = t_continuous.expand((x.shape[0]))
         t_input = get_model_input_time(t_continuous)
-        output = sampling_function(model, x, t_input, **model_kwargs)
+        output = model(x, t_input, **model_kwargs)
         if model_type == "noise":
             return output
         elif model_type == "x_start":
@@ -712,7 +711,7 @@ class UniPC:
 
     def sample(self, x, timesteps, t_start=None, t_end=None, order=3, skip_type='time_uniform',
         method='singlestep', lower_order_final=True, denoise_to_zero=False, solver_type='dpm_solver',
-        atol=0.0078, rtol=0.05, corrector=False,
+        atol=0.0078, rtol=0.05, corrector=False, callback=None, disable_pbar=False
     ):
         t_0 = 1. / self.noise_schedule.total_N if t_end is None else t_end
         t_T = self.noise_schedule.T if t_start is None else t_start
@@ -723,7 +722,7 @@ class UniPC:
             # timesteps = self.get_time_steps(skip_type=skip_type, t_T=t_T, t_0=t_0, N=steps, device=device)
             assert timesteps.shape[0] - 1 == steps
             # with torch.no_grad():
-            for step_index in trange(steps):
+            for step_index in trange(steps, disable=disable_pbar):
                 if self.noise_mask is not None:
                     x = x * self.noise_mask + (1. - self.noise_mask) * (self.masked_image * self.noise_schedule.marginal_alpha(timesteps[step_index]) + self.noise * self.noise_schedule.marginal_std(timesteps[step_index]))
                 if step_index == 0:
@@ -766,6 +765,8 @@ class UniPC:
                             if model_x is None:
                                 model_x = self.model_fn(x, vec_t)
                             model_prev_list[-1] = model_x
+                if callback is not None:
+                    callback(step_index, model_prev_list[-1], x, steps)
         else:
             raise NotImplementedError()
         if denoise_to_zero:
@@ -833,7 +834,7 @@ def expand_dims(v, dims):
 
 
 
-def sample_unipc(model, noise, image, sigmas, sampling_function, max_denoise, extra_args=None, callback=None, disable=None, noise_mask=None, variant='bh1'):
+def sample_unipc(model, noise, image, sigmas, sampling_function, max_denoise, extra_args=None, callback=None, disable=False, noise_mask=None, variant='bh1'):
         to_zero = False
         if sigmas[-1] == 0:
             timesteps = torch.nn.functional.interpolate(sigmas[None,None,:-1], size=(len(sigmas),), mode='linear')[0][0]
@@ -841,10 +842,12 @@ def sample_unipc(model, noise, image, sigmas, sampling_function, max_denoise, ex
         else:
             timesteps = sigmas.clone()
 
-        for s in range(timesteps.shape[0]):
-            timesteps[s] = (model.sigma_to_t(timesteps[s]) / 1000) + (1 / len(model.sigmas))
+        alphas_cumprod = model.inner_model.alphas_cumprod
 
-        ns = NoiseScheduleVP('discrete', alphas_cumprod=model.inner_model.alphas_cumprod)
+        for s in range(timesteps.shape[0]):
+            timesteps[s] = (model.sigma_to_discrete_timestep(timesteps[s]) / 1000) + (1 / len(alphas_cumprod))
+
+        ns = NoiseScheduleVP('discrete', alphas_cumprod=alphas_cumprod)
 
         if image is not None:
             img = image * ns.marginal_alpha(timesteps[0])
@@ -857,18 +860,15 @@ def sample_unipc(model, noise, image, sigmas, sampling_function, max_denoise, ex
             img = noise
 
         if to_zero:
-            timesteps[-1] = (1 / len(model.sigmas))
+            timesteps[-1] = (1 / len(alphas_cumprod))
 
         device = noise.device
 
-        if model.parameterization == "v":
-            model_type = "v"
-        else:
-            model_type = "noise"
+
+        model_type = "noise"
 
         model_fn = model_wrapper(
-            model.inner_model.inner_model.apply_model,
-            sampling_function,
+            model.predict_eps_discrete_timestep,
             ns,
             model_type=model_type,
             guidance_type="uncond",
@@ -877,7 +877,7 @@ def sample_unipc(model, noise, image, sigmas, sampling_function, max_denoise, ex
 
         order = min(3, len(timesteps) - 1)
         uni_pc = UniPC(model_fn, ns, predict_x0=True, thresholding=False, noise_mask=noise_mask, masked_image=image, noise=noise, variant=variant)
-        x = uni_pc.sample(img, timesteps=timesteps, skip_type="time_uniform", method="multistep", order=order, lower_order_final=True)
+        x = uni_pc.sample(img, timesteps=timesteps, skip_type="time_uniform", method="multistep", order=order, lower_order_final=True, callback=callback, disable_pbar=disable)
         if not to_zero:
             x /= ns.marginal_alpha(timesteps[-1])
         return x

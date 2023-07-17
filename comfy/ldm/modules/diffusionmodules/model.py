@@ -6,7 +6,7 @@ import numpy as np
 from einops import rearrange
 from typing import Optional, Any
 
-from ldm.modules.attention import MemoryEfficientCrossAttention
+from ..attention import MemoryEfficientCrossAttention
 from comfy import model_management
 
 if model_management.xformers_enabled_vae():
@@ -146,6 +146,41 @@ class ResnetBlock(nn.Module):
 
         return x+h
 
+def slice_attention(q, k, v):
+    r1 = torch.zeros_like(k, device=q.device)
+    scale = (int(q.shape[-1])**(-0.5))
+
+    mem_free_total = model_management.get_free_memory(q.device)
+
+    gb = 1024 ** 3
+    tensor_size = q.shape[0] * q.shape[1] * k.shape[2] * q.element_size()
+    modifier = 3 if q.element_size() == 2 else 2.5
+    mem_required = tensor_size * modifier
+    steps = 1
+
+    if mem_required > mem_free_total:
+        steps = 2**(math.ceil(math.log(mem_required / mem_free_total, 2)))
+
+    while True:
+        try:
+            slice_size = q.shape[1] // steps if (q.shape[1] % steps) == 0 else q.shape[1]
+            for i in range(0, q.shape[1], slice_size):
+                end = i + slice_size
+                s1 = torch.bmm(q[:, i:end], k) * scale
+
+                s2 = torch.nn.functional.softmax(s1, dim=2).permute(0,2,1)
+                del s1
+
+                r1[:, :, i:end] = torch.bmm(v, s2)
+                del s2
+            break
+        except model_management.OOM_EXCEPTION as e:
+            steps *= 2
+            if steps > 128:
+                raise e
+            print("out of memory error, increasing steps and trying again", steps)
+
+    return r1
 
 class AttnBlock(nn.Module):
     def __init__(self, in_channels):
@@ -183,48 +218,15 @@ class AttnBlock(nn.Module):
 
         # compute attention
         b,c,h,w = q.shape
-        scale = (int(c)**(-0.5))
 
         q = q.reshape(b,c,h*w)
         q = q.permute(0,2,1)   # b,hw,c
         k = k.reshape(b,c,h*w) # b,c,hw
         v = v.reshape(b,c,h*w)
 
-        r1 = torch.zeros_like(k, device=q.device)
-
-        mem_free_total = model_management.get_free_memory(q.device)
-
-        gb = 1024 ** 3
-        tensor_size = q.shape[0] * q.shape[1] * k.shape[2] * q.element_size()
-        modifier = 3 if q.element_size() == 2 else 2.5
-        mem_required = tensor_size * modifier
-        steps = 1
-
-        if mem_required > mem_free_total:
-            steps = 2**(math.ceil(math.log(mem_required / mem_free_total, 2)))
-
-        while True:
-            try:
-                slice_size = q.shape[1] // steps if (q.shape[1] % steps) == 0 else q.shape[1]
-                for i in range(0, q.shape[1], slice_size):
-                    end = i + slice_size
-                    s1 = torch.bmm(q[:, i:end], k) * scale
-
-                    s2 = torch.nn.functional.softmax(s1, dim=2).permute(0,2,1)
-                    del s1
-
-                    r1[:, :, i:end] = torch.bmm(v, s2)
-                    del s2
-                break
-            except model_management.OOM_EXCEPTION as e:
-                steps *= 2
-                if steps > 128:
-                    raise e
-                print("out of memory error, increasing steps and trying again", steps)
-
+        r1 = slice_attention(q, k, v)
         h_ = r1.reshape(b,c,h,w)
         del r1
-
         h_ = self.proj_out(h_)
 
         return x+h_
@@ -331,25 +333,18 @@ class MemoryEfficientAttnBlockPytorch(nn.Module):
 
         # compute attention
         B, C, H, W = q.shape
-        q, k, v = map(lambda x: rearrange(x, 'b c h w -> b (h w) c'), (q, k, v))
-
         q, k, v = map(
-            lambda t: t.unsqueeze(3)
-            .reshape(B, t.shape[1], 1, C)
-            .permute(0, 2, 1, 3)
-            .reshape(B * 1, t.shape[1], C)
-            .contiguous(),
+            lambda t: t.view(B, 1, C, -1).transpose(2, 3).contiguous(),
             (q, k, v),
         )
-        out = torch.nn.functional.scaled_dot_product_attention(q, k, v, attn_mask=None, dropout_p=0.0, is_causal=False)
 
-        out = (
-            out.unsqueeze(0)
-            .reshape(B, 1, out.shape[1], C)
-            .permute(0, 2, 1, 3)
-            .reshape(B, out.shape[1], C)
-        )
-        out = rearrange(out, 'b (h w) c -> b c h w', b=B, h=H, w=W, c=C)
+        try:
+            out = torch.nn.functional.scaled_dot_product_attention(q, k, v, attn_mask=None, dropout_p=0.0, is_causal=False)
+            out = out.transpose(2, 3).reshape(B, C, H, W)
+        except model_management.OOM_EXCEPTION as e:
+            print("scaled_dot_product_attention OOMed: switched to slice attention")
+            out = slice_attention(q.view(B, -1, C), k.view(B, -1, C).transpose(1, 2), v.view(B, -1, C).transpose(1, 2)).reshape(B, C, H, W)
+
         out = self.proj_out(out)
         return x+out
 
@@ -740,203 +735,3 @@ class Decoder(nn.Module):
         if self.tanh_out:
             h = torch.tanh(h)
         return h
-
-
-class SimpleDecoder(nn.Module):
-    def __init__(self, in_channels, out_channels, *args, **kwargs):
-        super().__init__()
-        self.model = nn.ModuleList([nn.Conv2d(in_channels, in_channels, 1),
-                                     ResnetBlock(in_channels=in_channels,
-                                                 out_channels=2 * in_channels,
-                                                 temb_channels=0, dropout=0.0),
-                                     ResnetBlock(in_channels=2 * in_channels,
-                                                out_channels=4 * in_channels,
-                                                temb_channels=0, dropout=0.0),
-                                     ResnetBlock(in_channels=4 * in_channels,
-                                                out_channels=2 * in_channels,
-                                                temb_channels=0, dropout=0.0),
-                                     nn.Conv2d(2*in_channels, in_channels, 1),
-                                     Upsample(in_channels, with_conv=True)])
-        # end
-        self.norm_out = Normalize(in_channels)
-        self.conv_out = torch.nn.Conv2d(in_channels,
-                                        out_channels,
-                                        kernel_size=3,
-                                        stride=1,
-                                        padding=1)
-
-    def forward(self, x):
-        for i, layer in enumerate(self.model):
-            if i in [1,2,3]:
-                x = layer(x, None)
-            else:
-                x = layer(x)
-
-        h = self.norm_out(x)
-        h = nonlinearity(h)
-        x = self.conv_out(h)
-        return x
-
-
-class UpsampleDecoder(nn.Module):
-    def __init__(self, in_channels, out_channels, ch, num_res_blocks, resolution,
-                 ch_mult=(2,2), dropout=0.0):
-        super().__init__()
-        # upsampling
-        self.temb_ch = 0
-        self.num_resolutions = len(ch_mult)
-        self.num_res_blocks = num_res_blocks
-        block_in = in_channels
-        curr_res = resolution // 2 ** (self.num_resolutions - 1)
-        self.res_blocks = nn.ModuleList()
-        self.upsample_blocks = nn.ModuleList()
-        for i_level in range(self.num_resolutions):
-            res_block = []
-            block_out = ch * ch_mult[i_level]
-            for i_block in range(self.num_res_blocks + 1):
-                res_block.append(ResnetBlock(in_channels=block_in,
-                                         out_channels=block_out,
-                                         temb_channels=self.temb_ch,
-                                         dropout=dropout))
-                block_in = block_out
-            self.res_blocks.append(nn.ModuleList(res_block))
-            if i_level != self.num_resolutions - 1:
-                self.upsample_blocks.append(Upsample(block_in, True))
-                curr_res = curr_res * 2
-
-        # end
-        self.norm_out = Normalize(block_in)
-        self.conv_out = torch.nn.Conv2d(block_in,
-                                        out_channels,
-                                        kernel_size=3,
-                                        stride=1,
-                                        padding=1)
-
-    def forward(self, x):
-        # upsampling
-        h = x
-        for k, i_level in enumerate(range(self.num_resolutions)):
-            for i_block in range(self.num_res_blocks + 1):
-                h = self.res_blocks[i_level][i_block](h, None)
-            if i_level != self.num_resolutions - 1:
-                h = self.upsample_blocks[k](h)
-        h = self.norm_out(h)
-        h = nonlinearity(h)
-        h = self.conv_out(h)
-        return h
-
-
-class LatentRescaler(nn.Module):
-    def __init__(self, factor, in_channels, mid_channels, out_channels, depth=2):
-        super().__init__()
-        # residual block, interpolate, residual block
-        self.factor = factor
-        self.conv_in = nn.Conv2d(in_channels,
-                                 mid_channels,
-                                 kernel_size=3,
-                                 stride=1,
-                                 padding=1)
-        self.res_block1 = nn.ModuleList([ResnetBlock(in_channels=mid_channels,
-                                                     out_channels=mid_channels,
-                                                     temb_channels=0,
-                                                     dropout=0.0) for _ in range(depth)])
-        self.attn = AttnBlock(mid_channels)
-        self.res_block2 = nn.ModuleList([ResnetBlock(in_channels=mid_channels,
-                                                     out_channels=mid_channels,
-                                                     temb_channels=0,
-                                                     dropout=0.0) for _ in range(depth)])
-
-        self.conv_out = nn.Conv2d(mid_channels,
-                                  out_channels,
-                                  kernel_size=1,
-                                  )
-
-    def forward(self, x):
-        x = self.conv_in(x)
-        for block in self.res_block1:
-            x = block(x, None)
-        x = torch.nn.functional.interpolate(x, size=(int(round(x.shape[2]*self.factor)), int(round(x.shape[3]*self.factor))))
-        x = self.attn(x)
-        for block in self.res_block2:
-            x = block(x, None)
-        x = self.conv_out(x)
-        return x
-
-
-class MergedRescaleEncoder(nn.Module):
-    def __init__(self, in_channels, ch, resolution, out_ch, num_res_blocks,
-                 attn_resolutions, dropout=0.0, resamp_with_conv=True,
-                 ch_mult=(1,2,4,8), rescale_factor=1.0, rescale_module_depth=1):
-        super().__init__()
-        intermediate_chn = ch * ch_mult[-1]
-        self.encoder = Encoder(in_channels=in_channels, num_res_blocks=num_res_blocks, ch=ch, ch_mult=ch_mult,
-                               z_channels=intermediate_chn, double_z=False, resolution=resolution,
-                               attn_resolutions=attn_resolutions, dropout=dropout, resamp_with_conv=resamp_with_conv,
-                               out_ch=None)
-        self.rescaler = LatentRescaler(factor=rescale_factor, in_channels=intermediate_chn,
-                                       mid_channels=intermediate_chn, out_channels=out_ch, depth=rescale_module_depth)
-
-    def forward(self, x):
-        x = self.encoder(x)
-        x = self.rescaler(x)
-        return x
-
-
-class MergedRescaleDecoder(nn.Module):
-    def __init__(self, z_channels, out_ch, resolution, num_res_blocks, attn_resolutions, ch, ch_mult=(1,2,4,8),
-                 dropout=0.0, resamp_with_conv=True, rescale_factor=1.0, rescale_module_depth=1):
-        super().__init__()
-        tmp_chn = z_channels*ch_mult[-1]
-        self.decoder = Decoder(out_ch=out_ch, z_channels=tmp_chn, attn_resolutions=attn_resolutions, dropout=dropout,
-                               resamp_with_conv=resamp_with_conv, in_channels=None, num_res_blocks=num_res_blocks,
-                               ch_mult=ch_mult, resolution=resolution, ch=ch)
-        self.rescaler = LatentRescaler(factor=rescale_factor, in_channels=z_channels, mid_channels=tmp_chn,
-                                       out_channels=tmp_chn, depth=rescale_module_depth)
-
-    def forward(self, x):
-        x = self.rescaler(x)
-        x = self.decoder(x)
-        return x
-
-
-class Upsampler(nn.Module):
-    def __init__(self, in_size, out_size, in_channels, out_channels, ch_mult=2):
-        super().__init__()
-        assert out_size >= in_size
-        num_blocks = int(np.log2(out_size//in_size))+1
-        factor_up = 1.+ (out_size % in_size)
-        print(f"Building {self.__class__.__name__} with in_size: {in_size} --> out_size {out_size} and factor {factor_up}")
-        self.rescaler = LatentRescaler(factor=factor_up, in_channels=in_channels, mid_channels=2*in_channels,
-                                       out_channels=in_channels)
-        self.decoder = Decoder(out_ch=out_channels, resolution=out_size, z_channels=in_channels, num_res_blocks=2,
-                               attn_resolutions=[], in_channels=None, ch=in_channels,
-                               ch_mult=[ch_mult for _ in range(num_blocks)])
-
-    def forward(self, x):
-        x = self.rescaler(x)
-        x = self.decoder(x)
-        return x
-
-
-class Resize(nn.Module):
-    def __init__(self, in_channels=None, learned=False, mode="bilinear"):
-        super().__init__()
-        self.with_conv = learned
-        self.mode = mode
-        if self.with_conv:
-            print(f"Note: {self.__class__.__name} uses learned downsampling and will ignore the fixed {mode} mode")
-            raise NotImplementedError()
-            assert in_channels is not None
-            # no asymmetric padding in torch conv, must do it ourselves
-            self.conv = torch.nn.Conv2d(in_channels,
-                                        in_channels,
-                                        kernel_size=4,
-                                        stride=2,
-                                        padding=1)
-
-    def forward(self, x, scale_factor=1.0):
-        if scale_factor==1.0:
-            return x
-        else:
-            x = torch.nn.functional.interpolate(x, mode=self.mode, align_corners=False, scale_factor=scale_factor)
-        return x

@@ -4,7 +4,7 @@ import torch
 import numpy as np
 from tqdm import tqdm
 
-from ldm.modules.diffusionmodules.util import make_ddim_sampling_parameters, make_ddim_timesteps, noise_like, extract_into_tensor
+from comfy.ldm.modules.diffusionmodules.util import make_ddim_sampling_parameters, make_ddim_timesteps, noise_like, extract_into_tensor
 
 
 class DDIMSampler(object):
@@ -14,6 +14,7 @@ class DDIMSampler(object):
         self.ddpm_num_timesteps = model.num_timesteps
         self.schedule = schedule
         self.device = device
+        self.parameterization = kwargs.get("parameterization", "eps")
 
     def register_buffer(self, name, attr):
         if type(attr) == torch.Tensor:
@@ -81,6 +82,7 @@ class DDIMSampler(object):
                       extra_args=None,
                       to_zero=True,
                       end_step=None,
+                      disable_pbar=False,
                       **kwargs
                       ):
         self.make_schedule_timesteps(ddim_timesteps=ddim_timesteps, ddim_eta=eta, verbose=verbose)
@@ -103,7 +105,8 @@ class DDIMSampler(object):
                                                     denoise_function=denoise_function,
                                                     extra_args=extra_args,
                                                     to_zero=to_zero,
-                                                    end_step=end_step
+                                                    end_step=end_step,
+                                                    disable_pbar=disable_pbar
                                                     )
         return samples, intermediates
 
@@ -178,6 +181,12 @@ class DDIMSampler(object):
                                                     )
         return samples, intermediates
 
+    def q_sample(self, x_start, t, noise=None):
+        if noise is None:
+            noise = torch.randn_like(x_start)
+        return (extract_into_tensor(self.sqrt_alphas_cumprod, t, x_start.shape) * x_start +
+                extract_into_tensor(self.sqrt_one_minus_alphas_cumprod, t, x_start.shape) * noise)
+
     @torch.no_grad()
     def ddim_sampling(self, cond, shape,
                       x_T=None, ddim_use_original_steps=False,
@@ -185,7 +194,7 @@ class DDIMSampler(object):
                       mask=None, x0=None, img_callback=None, log_every_t=100,
                       temperature=1., noise_dropout=0., score_corrector=None, corrector_kwargs=None,
                       unconditional_guidance_scale=1., unconditional_conditioning=None, dynamic_threshold=None,
-                      ucg_schedule=None, denoise_function=None, extra_args=None, to_zero=True, end_step=None):
+                      ucg_schedule=None, denoise_function=None, extra_args=None, to_zero=True, end_step=None, disable_pbar=False):
         device = self.model.betas.device
         b = shape[0]
         if x_T is None:
@@ -204,7 +213,7 @@ class DDIMSampler(object):
         total_steps = timesteps if ddim_use_original_steps else timesteps.shape[0]
         # print(f"Running DDIM Sampling with {total_steps} timesteps")
 
-        iterator = tqdm(time_range[:end_step], desc='DDIM Sampler', total=end_step)
+        iterator = tqdm(time_range[:end_step], desc='DDIM Sampler', total=end_step, disable=disable_pbar)
 
         for i, step in enumerate(iterator):
             index = total_steps - i - 1
@@ -212,7 +221,7 @@ class DDIMSampler(object):
 
             if mask is not None:
                 assert x0 is not None
-                img_orig = self.model.q_sample(x0, ts)  # TODO: deterministic forward pass?
+                img_orig = self.q_sample(x0, ts)  # TODO: deterministic forward pass?
                 img = img_orig * mask + (1. - mask) * img
 
             if ucg_schedule is not None:
@@ -253,7 +262,7 @@ class DDIMSampler(object):
         b, *_, device = *x.shape, x.device
 
         if denoise_function is not None:
-            model_output = denoise_function(self.model.apply_model, x, t, **extra_args)
+            model_output = denoise_function(x, t, **extra_args)
         elif unconditional_conditioning is None or unconditional_guidance_scale == 1.:
             model_output = self.model.apply_model(x, t, c)
         else:
@@ -281,13 +290,13 @@ class DDIMSampler(object):
             model_uncond, model_t = self.model.apply_model(x_in, t_in, c_in).chunk(2)
             model_output = model_uncond + unconditional_guidance_scale * (model_t - model_uncond)
 
-        if self.model.parameterization == "v":
-            e_t = self.model.predict_eps_from_z_and_v(x, t, model_output)
+        if self.parameterization == "v":
+            e_t = extract_into_tensor(self.sqrt_alphas_cumprod, t, x.shape) * model_output + extract_into_tensor(self.sqrt_one_minus_alphas_cumprod, t, x.shape) * x
         else:
             e_t = model_output
 
         if score_corrector is not None:
-            assert self.model.parameterization == "eps", 'not implemented'
+            assert self.parameterization == "eps", 'not implemented'
             e_t = score_corrector.modify_score(self.model, e_t, x, t, c, **corrector_kwargs)
 
         alphas = self.model.alphas_cumprod if use_original_steps else self.ddim_alphas
@@ -301,10 +310,10 @@ class DDIMSampler(object):
         sqrt_one_minus_at = torch.full((b, 1, 1, 1), sqrt_one_minus_alphas[index],device=device)
 
         # current prediction for x_0
-        if self.model.parameterization != "v":
+        if self.parameterization != "v":
             pred_x0 = (x - sqrt_one_minus_at * e_t) / a_t.sqrt()
         else:
-            pred_x0 = self.model.predict_start_from_z_and_v(x, t, model_output)
+            pred_x0 = extract_into_tensor(self.sqrt_alphas_cumprod, t, x.shape) * x - extract_into_tensor(self.sqrt_one_minus_alphas_cumprod, t, x.shape) * model_output
 
         if quantize_denoised:
             pred_x0, _, *_ = self.model.first_stage_model.quantize(pred_x0)
