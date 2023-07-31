@@ -12,14 +12,14 @@ class ModelType(Enum):
     V_PREDICTION = 2
 
 class BaseModel(torch.nn.Module):
-    def __init__(self, model_config, model_type=ModelType.EPS):
+    def __init__(self, model_config, model_type=ModelType.EPS, device=None):
         super().__init__()
 
         unet_config = model_config.unet_config
         self.latent_format = model_config.latent_format
         self.model_config = model_config
         self.register_schedule(given_betas=None, beta_schedule="linear", timesteps=1000, linear_start=0.00085, linear_end=0.012, cosine_s=8e-3)
-        self.diffusion_model = UNetModel(**unet_config)
+        self.diffusion_model = UNetModel(**unet_config, device=device)
         self.model_type = model_type
         self.adm_channels = unet_config.get("adm_in_channels", None)
         if self.adm_channels is None:
@@ -99,12 +99,16 @@ class BaseModel(torch.nn.Module):
         if self.get_dtype() == torch.float16:
             clip_state_dict = utils.convert_sd_to(clip_state_dict, torch.float16)
             vae_state_dict = utils.convert_sd_to(vae_state_dict, torch.float16)
+
+        if self.model_type == ModelType.V_PREDICTION:
+            unet_state_dict["v_pred"] = torch.tensor([])
+
         return {**unet_state_dict, **vae_state_dict, **clip_state_dict}
 
 
 class SD21UNCLIP(BaseModel):
-    def __init__(self, model_config, noise_aug_config, model_type=ModelType.V_PREDICTION):
-        super().__init__(model_config, model_type)
+    def __init__(self, model_config, noise_aug_config, model_type=ModelType.V_PREDICTION, device=None):
+        super().__init__(model_config, model_type, device=device)
         self.noise_augmentor = CLIPEmbeddingNoiseAugmentation(**noise_aug_config)
 
     def encode_adm(self, **kwargs):
@@ -139,13 +143,13 @@ class SD21UNCLIP(BaseModel):
         return adm_out
 
 class SDInpaint(BaseModel):
-    def __init__(self, model_config, model_type=ModelType.EPS):
-        super().__init__(model_config, model_type)
+    def __init__(self, model_config, model_type=ModelType.EPS, device=None):
+        super().__init__(model_config, model_type, device=device)
         self.concat_keys = ("mask", "masked_image")
 
 class SDXLRefiner(BaseModel):
-    def __init__(self, model_config, model_type=ModelType.EPS):
-        super().__init__(model_config, model_type)
+    def __init__(self, model_config, model_type=ModelType.EPS, device=None):
+        super().__init__(model_config, model_type, device=device)
         self.embedder = Timestep(256)
 
     def encode_adm(self, **kwargs):
@@ -160,7 +164,6 @@ class SDXLRefiner(BaseModel):
         else:
             aesthetic_score = kwargs.get("aesthetic_score", 6)
 
-        print(clip_pooled.shape, width, height, crop_w, crop_h, aesthetic_score)
         out = []
         out.append(self.embedder(torch.Tensor([height])))
         out.append(self.embedder(torch.Tensor([width])))
@@ -171,8 +174,8 @@ class SDXLRefiner(BaseModel):
         return torch.cat((clip_pooled.to(flat.device), flat), dim=1)
 
 class SDXL(BaseModel):
-    def __init__(self, model_config, model_type=ModelType.EPS):
-        super().__init__(model_config, model_type)
+    def __init__(self, model_config, model_type=ModelType.EPS, device=None):
+        super().__init__(model_config, model_type, device=device)
         self.embedder = Timestep(256)
 
     def encode_adm(self, **kwargs):
@@ -184,7 +187,6 @@ class SDXL(BaseModel):
         target_width = kwargs.get("target_width", width)
         target_height = kwargs.get("target_height", height)
 
-        print(clip_pooled.shape, width, height, crop_w, crop_h, target_width, target_height)
         out = []
         out.append(self.embedder(torch.Tensor([height])))
         out.append(self.embedder(torch.Tensor([width])))
