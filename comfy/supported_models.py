@@ -109,8 +109,8 @@ class SDXLRefiner(supported_models_base.BASE):
 
     latent_format = latent_formats.SDXL
 
-    def get_model(self, state_dict, prefix=""):
-        return model_base.SDXLRefiner(self)
+    def get_model(self, state_dict, prefix="", device=None):
+        return model_base.SDXLRefiner(self, device=device)
 
     def process_clip_state_dict(self, state_dict):
         keys_to_replace = {}
@@ -126,7 +126,8 @@ class SDXLRefiner(supported_models_base.BASE):
     def process_clip_state_dict_for_saving(self, state_dict):
         replace_prefix = {}
         state_dict_g = diffusers_convert.convert_text_enc_state_dict_v20(state_dict, "clip_g")
-        state_dict_g.pop("clip_g.transformer.text_model.embeddings.position_ids")
+        if "clip_g.transformer.text_model.embeddings.position_ids" in state_dict_g:
+            state_dict_g.pop("clip_g.transformer.text_model.embeddings.position_ids")
         replace_prefix["clip_g"] = "conditioner.embedders.0.model"
         state_dict_g = supported_models_base.state_dict_prefix_replace(state_dict_g, replace_prefix)
         return state_dict_g
@@ -151,8 +152,8 @@ class SDXL(supported_models_base.BASE):
         else:
             return model_base.ModelType.EPS
 
-    def get_model(self, state_dict, prefix=""):
-        return model_base.SDXL(self, model_type=self.model_type(state_dict, prefix))
+    def get_model(self, state_dict, prefix="", device=None):
+        return model_base.SDXL(self, model_type=self.model_type(state_dict, prefix), device=device)
 
     def process_clip_state_dict(self, state_dict):
         keys_to_replace = {}
@@ -171,7 +172,8 @@ class SDXL(supported_models_base.BASE):
         replace_prefix = {}
         keys_to_replace = {}
         state_dict_g = diffusers_convert.convert_text_enc_state_dict_v20(state_dict, "clip_g")
-        state_dict_g.pop("clip_g.transformer.text_model.embeddings.position_ids")
+        if "clip_g.transformer.text_model.embeddings.position_ids" in state_dict_g:
+            state_dict_g.pop("clip_g.transformer.text_model.embeddings.position_ids")
         for k in state_dict:
             if k.startswith("clip_l"):
                 state_dict_g[k] = state_dict[k]
