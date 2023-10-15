@@ -1,2 +1,2 @@
-conda activate comfyui
+conda activate comfyui2
 python .\main.py
